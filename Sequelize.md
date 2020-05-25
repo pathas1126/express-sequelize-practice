@@ -55,12 +55,162 @@ DB_HOST = "DB호스트"
 > 프로젝트 루트에 .env 파일 생성 후 아래 코드 작성
 
 ```javas
-DATABASE = "M"
+DATABASE = "exercise"
 DB_USER = "root"
-DB_PASSWORD = "패스워드"
-DB_HOST = "DB호스트"
+DB_PASSWORD = "root 계정 PWD"
+DB_HOST = "localhost"
 ```
 
 - .env 파일에 작성한 환경 변수는 프로젝트 어디에서나 process.env의 속성으로 접근 가능
   ex) process.env.DATABASE
-- 
+- 실제 .env 파일은 .gitignore에 추가해서 git이 추적하지 않도록 해야 함
+
+*※ .env 파일에 코드를 작성할 때 줄 마지막에 띄어쓰기가 있다면 에러가 발생함으로 주의!!*
+
+# Database 생성
+
+> 프로젝트에서 사용할 MySQL DB 생성
+
+## MySQL 로그인
+
+```bash
+$ mysql -u root -p
+$ ###### 
+```
+
+- 위의 명령어는 cmd의 위치를 mysql의 bin 폴더로 옮긴 뒤 실행
+
+## DATABASE 생성
+
+```sql
+CREATE DATABASE exercise;
+Query OK, 1 row affected (0.02 sec)
+```
+
+## DATABASE 확인
+
+```sql
+SHOW DATABASES;
++--------------------+
+| Database           |
++--------------------+
+| blog               |
+| dailycoding        |
+| exercise           | => exercise 데이터베이스 생성
+| information_schema |
+| mysql              |
+| performance_schema |
+| sys                |
+| workbench          |
++--------------------+
+```
+
+# DB 접속
+
+> Sequelize를 통해서 Database에 접근
+
+## 라이브러리 설치
+
+```bash
+$ npm i mysql2 sequelize@4.42.0
+```
+
+- mysql2: mysql 데이터베이스에 접근하는 것을 도와주는 라이브러리
+- sequelize: node.js로 MySQL에 접근하는 것을 도와주는 라이브러리, ORM
+
+## DATABASE 동기화
+
+### DB 접근 파일 작성
+
+> 프로젝트 루트에 models 폴더 생성 후 index.js 파일 작성
+
+```javascript
+var Sequelize = require("sequelize");
+var path = require("path");
+var fs = require("fs");
+var dotenv = require("dotenv");
+
+dotenv.config(); //LOAD CONFIG
+
+const sequelize = new Sequelize(
+  process.env.DATABASE,
+  process.env.DB_USER,
+  process.env.DB_PASSWORD,
+  {
+    host: process.env.DB_HOST,
+    dialect: "mysql",
+    timezone: "+09:00", //한국 시간 셋팅
+    operatorsAliases: Sequelize.Op,
+    pool: {
+      max: 5,
+      min: 0,
+      idle: 10000,
+    },
+  }
+);
+
+let db = [];
+
+fs.readdirSync(__dirname)
+  .filter((file) => {
+    return file.indexOf(".js") && file !== "index.js";
+  })
+  .forEach((file) => {
+    var model = sequelize.import(path.join(__dirname, file));
+    db[model.name] = model;
+  });
+
+Object.keys(db).forEach((modelName) => {
+  if ("associate" in db[modelName]) {
+    db[modelName].associate(db);
+  }
+});
+
+db.sequelize = sequelize;
+db.Sequelize = Sequelize;
+
+module.exports = db;
+```
+
+### app.js에서 DB 접속하기
+
+> app.js 파일을 아래와 같이 수정
+
+```javascript
+// ...
+const db = require("./models");
+
+class App {
+  constructor() {
+    this.app = express();
+
+    // db 접속
+    this.dbConnection();
+      
+	// ...	
+  }
+
+  dbConnection() {
+    // DB authentication
+    db.sequelize
+      .authenticate()
+      .then(() => {
+        console.log("Connection has been established successfully.");
+      })
+      .then(() => {
+        console.log("DB Sync complete.");
+      })
+      .catch((err) => {
+        console.error("Unable to connect to the database:", err);
+      });
+  }
+
+    // ...
+```
+
+- `npm start` 명령어로 결과 확인
+
+# 모델 작성
+
+> SQL에서는 테이블을 작성하는 것과 동일
+

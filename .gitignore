@@ -1,3 +1,5 @@
+# node_modules
 /node_modules
 
-.env
+# Database env
+*.env
