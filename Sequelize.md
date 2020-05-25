@@ -132,6 +132,7 @@ var dotenv = require("dotenv");
 
 dotenv.config(); //LOAD CONFIG
 
+// Sequelize를 초기화하며 인스턴스를 생성
 const sequelize = new Sequelize(
   process.env.DATABASE,
   process.env.DB_USER,
@@ -151,6 +152,8 @@ const sequelize = new Sequelize(
 
 let db = [];
 
+// models 폴더 내부에 index.js 파일을 제외한 js 파일을
+// Sequelize와 연동하는 코드
 fs.readdirSync(__dirname)
   .filter((file) => {
     return file.indexOf(".js") && file !== "index.js";
@@ -160,6 +163,7 @@ fs.readdirSync(__dirname)
     db[model.name] = model;
   });
 
+// 외부키가 있는 경우 연결하는 코드
 Object.keys(db).forEach((modelName) => {
   if ("associate" in db[modelName]) {
     db[modelName].associate(db);
@@ -214,3 +218,57 @@ class App {
 
 > SQL에서는 테이블을 작성하는 것과 동일
 
+## Products 모델 작성
+
+> models 폴더에 Products.js 파일 생성 후 아래 코드 작성
+
+```javascript
+module.exports = (sequelize, DataTypes) => {
+  const Products = sequelize.define("Products", {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    name: { type: DataTypes.STRING },
+    price: { type: DataTypes.INTEGER },
+    description: { type: DataTypes.TEXT },
+  });
+  return Products;
+};
+```
+
+- Products 모델 작성
+- id, name, price, description 네 개의 칼럼을 갖는 테이블
+- DataTypes: 데이터 형식 지정
+- primaryKey: 해당 칼럼을 주요키로 설정, 주요키는 고유의 값을 가지면서 각각의 로우를 구분하는 역할을 함
+- autoIncrement: 입력값이 없는 경우 자동으로 1씩 증가됨
+
+## model 동기화 하기
+
+> app.js 파일을 아래와 같이 수정
+
+```javascript
+// ...
+  dbConnection() {
+    // DB authentication
+    db.sequelize
+      .authenticate()
+      .then(() => {
+        console.log("Connection has been established successfully.");
+      })
+      .then(() => {
+        console.log("DB Sync complete.");
+        return db.sequelize.sync();
+      })
+      .catch((err) => {
+        console.error("Unable to connect to the database:", err);
+      });
+  }
+// ...
+/*
+Executing (default): CREATE TABLE IF NOT EXISTS `Products` (`id` INTEGER auto_increment 
+, `name` VARCHAR(255), `price` INTEGER, `description` TEXT, `createdAt` DATETIME NOT NULL, `updatedAt` DATETIME NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB;
+Executing (default): SHOW INDEX FROM `Products`
+*/
+```
+
+- 두 번째 then의 return 이하에서 데이터베이스를 동기화함
+- CMD 창이나 워크 벤치로 exercise 데이터베이스를 조회해 보면,
+  Products 테이블이 생성된 것을 볼 수 있음
