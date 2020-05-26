@@ -41,3 +41,34 @@ exports.get_products_detail = (req, res) => {
     res.render("admin/detail.nunjucks", { product });
   });
 };
+
+exports.get_products_edit = (req, res) => {
+  const { id } = req.params;
+  models.Products.findByPk(id)
+    .then((product) => {
+      res.render("admin/write.nunjucks", { product });
+    })
+    .catch((error) => {
+      throw error;
+    });
+};
+
+exports.post_products_edit = (req, res) => {
+  const { name, price, description } = req.body;
+  const { id } = req.params;
+
+  models.Products.update(
+    {
+      name,
+      price,
+      description,
+    },
+    {
+      where: { id },
+    }
+  )
+    .then(() => res.redirect(`/admin/products/detail/${id}`))
+    .catch((error) => {
+      throw err;
+    });
+};

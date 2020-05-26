@@ -535,17 +535,89 @@ module.exports = (sequelize, DataTypes) => {
 - Product 모델에 prototype 으로 등록한 dateFormat 메서드를 product의 메서드로 사용 가능
 - 결과를 보면 포맷에 맞게 날짜가 출력되는 것을 볼 수 있음
 
-# DB 수정
+# DB 수정 update
 
 > sequelize를 이용해 데이터베이스 내부의 데이터를 수정하는 것
+> sql문에서의 update문과 유사한 기능
 
-## 서버에서 요청이 들어올 경로 처리하기
+## 서버에서 GET 요청이 들어올 경로 처리하기
 
 ### 라우터에 경로 추가하기
 
-```javascript
+> controllers/admin/index.js 에 다음 코드 추가
 
+```javascript
+// ...
+router.get("/products/edit/:id", ctrl.get_products_edit);
+// ...
 ```
 
+### 컨트롤러에서 요청 처리하기
 
+> controllers/admin/admin.ctrl.js 에 다음 코드 추가
 
+```javascript
+// ...
+exports.get_products_edit = (req, res) => {
+  const { id } = req.params;
+  models.Products.findByPk(id)
+    .then((product) => {
+      res.render("admin/write.nunjucks", { product });
+    })
+    .catch((error) => {
+      throw error;
+    });
+};
+```
+
+- 기존에 상품을 등록할 때 썼던 write.nunjucks 파일 재사용
+- 기존 데이터를 표기하기 위해 id 값으로 모델을 조회하고 데이터를 렌더링 페이지에 전송
+- write.nunjucks 파일을 보면 form 태그의 action이 비워져 있기 때문에 글 작성/수정 경로에 맞게 POST로 요청을 수행
+
+## POST 요청 경로 처리하기
+
+### 라우터에 경로 추가하기
+
+> controllers/admin/index.js 파일에 아래 코드 추가
+
+```javascript
+// ...
+router.post("/products/edit/:id", ctrl.post_products_edit);
+// ...
+```
+
+### 컨트롤러에서 요청 처리하기
+
+> admin.ctrl.js 파일에 아래 코드 추가
+
+```javascript
+// ...
+exports.post_products_edit = (req, res) => {
+  const { name, price, description } = req.body;
+  const { id } = req.params;
+
+  models.Products.update(
+    {
+      name,
+      price,
+      description,
+    },
+    {
+      where: { id },
+    }
+  )
+    .then(() => res.redirect(`/admin/products/detail/${id}`))
+    .catch((error) => {
+      throw err;
+    });
+};
+```
+
+- update 메서드로 모델 데이터 수정 가능
+- update 의 첫 번째 인수로는 데이터를, 두 번째 인수로는 where 조건식을 전달
+- 수정 후 원래 보고 있던 상세 페이지로 리다이렉트 실행
+
+# DB 삭제
+
+> sequelize를 이용해서 데이터베이스의 데이터를 삭제
+> sql문의 delete문과 유사
