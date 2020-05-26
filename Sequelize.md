@@ -10,6 +10,8 @@
 
 ## Sequelize CRUD methods
 
+> sequelize의 모든 메서드는 bluebird를 기반으로 한 Promise를 리턴
+
 ### 형식
 
 ```javascript
