@@ -8,6 +8,36 @@
 - 데이터베이스의 구조를 프로젝트의 폴더 구조와 코드를 통해서 확인 가능
 - 유효성 검사를 편리하게 할 수 있음
 
+## Sequelize CRUD methods
+
+### 형식
+
+```javascript
+DB_INSTANCE.TABLE_NAME.method()
+
+// 예제
+models.users.create({ name, age });
+```
+
+- DB_INSTANCE: MySQL의 DATABASE 이름
+- TABLE_NAME: DATABASE 내부의 TABLE 이름
+- method: CRUD 메서드 중 하나, 각 메서드의 형식에 맞게 사용
+
+### 메서드 정리
+
+| 메서드                   | 설명                                                         |
+| ------------------------ | ------------------------------------------------------------ |
+| create(DATA)             | 테이블에 데이터를 추가하는 메서드로, 데이터는 객체 형식으로 전달 |
+| findAll(CONDITIONS)      | 조건에 해당하는 모든 데이터를 조회하는 메서드로, 테이블의 전체 데이터를 조회하고자 할 때는 {}빈 객체 전달 |
+| findByPk(PRIMARY_KEY)    | 프라이머리 키로 데이터를 조회하는 메서드이며, 프라이머리 키에 해당하는 데이터 전달 |
+| findOne(CONDITIONS)      | 조건에 해당하는 하나의 데이터만 조회하는 메서드, CONDITIONS에 원하는 조건을 객체 형태로 입력 |
+| update(DATA, CONDITIONS) | 조건에 해당하는 데이터베이스 내부의 데이터를 인수로 전달하는 데이터로 수정하는 메서드 |
+| destroy(CONDITIONS)      | 조건에 해당하는 데이터를 데이터베이스에서 삭제하는 메서드    |
+
+*※ DATA 형식: **{ 필드: 값 }***
+
+*※ CONDITIONS(조건식) 형식: **{ where: { 필드: 원하는 값 } }***
+
 ## 실습 프로젝트 시작하기
 
 ### 전체 프로젝트 파일
@@ -617,7 +647,54 @@ exports.post_products_edit = (req, res) => {
 - update 의 첫 번째 인수로는 데이터를, 두 번째 인수로는 where 조건식을 전달
 - 수정 후 원래 보고 있던 상세 페이지로 리다이렉트 실행
 
-# DB 삭제
+# DB 삭제 destroy
 
 > sequelize를 이용해서 데이터베이스의 데이터를 삭제
 > sql문의 delete문과 유사
+
+## 서버에서 GET 요청 처리하기
+
+> 클라이언트에서 GET 메서드를 이용해서 삭제 요청을 진행
+
+### 라우터에 경로 추가하기
+
+> controllers/admin/index.js에 다음 코드 추가
+
+```javascript
+// ...
+router.get("/products/delete/:id", ctrl.get_products_delete);
+// ...
+```
+
+### 컨트롤러에서 요청 처리하기
+
+> admin.ctrl.js에 다음 코드 추가
+
+```javascript
+exports.get_products_delete = (req, res) => {
+  const { id } = req.params;
+  models.Products.destroy({
+    where: { id }
+  })
+    .then(() => res.redirect(`/admin/products`))
+    .catch((error) => {
+      throw error;
+    });
+};
+```
+
+### 뷰에서 요청 경로 수정하기
+
+> products.nunjucks 파일을 아래와 같이 수정
+
+```html
+<!-- ... -->
+        <td>
+          <a href="/admin/products/delete/{{ product.id }}" class="btn btn-danger" onclick="return confirm('삭제하시겠습니까?')">삭제</a>
+        </td>
+<!-- ... -->
+```
+
+- 요청 경로를 라우터에 추가한 경로와 동일하게 수정
+- onclick 이벤트에 confirm 메서드를 등록해서 '확인'을 누르는 경우에만 삭제 실행
+

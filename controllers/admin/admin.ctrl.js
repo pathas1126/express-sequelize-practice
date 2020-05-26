@@ -72,3 +72,16 @@ exports.post_products_edit = (req, res) => {
       throw err;
     });
 };
+
+exports.get_products_delete = (req, res) => {
+  const { id } = req.params;
+  models.Products.destroy({
+    where: {
+      id,
+    },
+  })
+    .then(() => res.redirect(`/admin/products`))
+    .catch((error) => {
+      throw error;
+    });
+};
