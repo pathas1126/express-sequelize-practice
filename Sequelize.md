@@ -273,7 +273,7 @@ Executing (default): SHOW INDEX FROM `Products`
 - CMD 창이나 워크 벤치로 exercise 데이터베이스를 조회해 보면,
   Products 테이블이 생성된 것을 볼 수 있음
 
-# DB 입력 INSERT
+# DB 입력 create
 
 > sequelize를 이용해 위에서 작성한 모델에 데이터를 추가하는 것
 > sql 문으로는 INSERT문에 해당
@@ -315,10 +315,10 @@ Executing (default): INSERT INTO `Products` (`id`,`name`,`price`,`description`,`
 - create 메서드로 칼럼 추가, sql에서의 INSERT와 동일한 역할
 - 칼럼 추가 후 redirect 메서드로 products 페이지로 리다이렉션
 
-# DB 조회 SELECT
+# DB 조회 findAll
 
 > sequelize를 이용해서 모델에서 데이터를 조회하는 것
-> sql 문의 select문과 유사
+> sql 문의 select * from 문과 유사
 
 ## sequelize 데이터 조회하기
 
@@ -387,3 +387,165 @@ router.get("/products", ctrl.get_products);
 
 - {% for Element in Array %} ~ {% endblock %}: Nunjucks의 for문을 사용해서 그 안에 데이터를 출력
 - 결과를 보면 form에서 데이터를 추가할 때마다 조회도 잘 되는 것을 확인할 수 있음
+
+# DB 조회  findOne, findByPk
+
+> sequelize를 이용해서 모델에서 특정 데이터만 조회하는 것
+> sql에서 where 조건식을 사용한 select문과 유사
+
+## 상세 페이지 만들기
+
+### 상품별 링크 달기
+
+> products.nunjucks의 소스 코드를 아래와 같이 수정
+
+```html
+<!-- ... -->
+    {% for product in products %}
+      <tr>
+        <td>
+          <a href="/admin/products/detail/{{product.id}}">
+            {{product.name}}
+          </a>
+        </td>
+        <td>
+          {{product.createdAt}}
+        </td>
+        <td>
+          <a href="#" class="btn btn-danger">삭제</a>
+        </td>
+      </tr>
+    {% endfor %}
+<!-- ... -->
+```
+
+- 이름을 클릭하면 상품의 id가 포함된 주소로 이동하며 같은 주소로 GET 요청을 보냄
+
+### 서버에서 GET 요청 처리할 경로 설정
+
+> controllers/admin/index.js를 다음과 같이 수정
+
+```javascript
+// ...
+router.get("/products/detail/:id", ctrl.get_products_detail);
+
+module.exports = router;
+```
+
+### 컨트롤러에서 GET 요청 처리
+
+> admin.ctrl.js를 다음과 같이 수정
+
+```javascript
+// ...
+exports.get_products_detail = (req, res) => {
+  const { id } = req.params;
+  models.Products.findByPk(id).then((product) => {
+    res.render("admin/detail.nunjucks", { product });
+  });
+};
+```
+
+- /:param 형식으로 작성된 변수는 요청의 params 속성으로 조회 가능
+- findByPk 메서드를 사용해서 Pk값이 id 변수의 값과 일치하는 데이터 조회
+
+### 상세 페이지 만들기
+
+> template/admin 폴더에 detail.nunjucks 파일 작성
+
+```html
+{% set title = "관리자 : 상세페이지" %}
+{% extends "layout/base.nunjucks" %}
+
+{% block content -%}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            {{ product.name }}
+        </div>
+        <div class="panel-body">
+            <div style="padding-bottom: 10px">
+                작성일 :
+                {{ product.createdAt }}
+            </div>
+
+            {{ product.description }}
+
+        </div>
+    </div>
+
+    <a href="/admin/products" class="btn btn-default">목록으로</a>
+    <a href="/admin/products/edit/{{ product.id }}" class="btn btn-primary">수정</a>
+
+{% endblock %}
+```
+
+- 각각의 데이터를 적당한 위치에 출력
+
+# Sequelize에 메서드 추가하기
+
+> 날짜 형식을 개선하기 위해 moment.js 를 이용해서 sequelize에 메서드 추가
+
+## moment.js
+
+> https://momentjs.com/
+> 날짜 형식을 조정하기 위해 많이 사용되는 라이브러리
+
+### 설치
+
+```bash
+$ npm i moment
+```
+
+### Products 모델에 메서드 추가
+
+> Products.js를 다음과 같이 수정
+
+```javascript
+const moment = require("moment");
+
+module.exports = (sequelize, DataTypes) => {
+  const Products = sequelize.define("Products", {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    name: { type: DataTypes.STRING },
+    price: { type: DataTypes.INTEGER },
+    description: { type: DataTypes.TEXT },
+  });
+
+  Products.prototype.dateFormat = (date) => moment(date).format("YYYY년 MM월 DD일");
+
+  return Products;
+};
+```
+
+- moment 패키지를 가져옴
+- Products 모델에 prototype을 이용해서 dateFormat 메서드 추가
+- YYYY, MM, DD와 같이 정해진 양식을 제외하고는 자유롭게 작성 가능
+- 유용하거나 여러 곳에서 사용할 수 있는 기능은 view(html, nunjucks etc.)에서 직접 작성하는 것보다 메서드로 만들어서 prototype에 등록해 두면 다양한 곳에서 재사용 가능하기 때문에 가능한 models에 메서드로 정의하는 것이 권장됨
+
+### 메서드 사용하기
+
+> products.nunjucks, detail.nunjucks 파일의 날짜 출력 부분을 아래와 같이 수정
+
+```html
+<!-- ... -->
+	{{product.dateFormat(product.createdAt)}}
+<!-- ... -->
+```
+
+- Product 모델에 prototype 으로 등록한 dateFormat 메서드를 product의 메서드로 사용 가능
+- 결과를 보면 포맷에 맞게 날짜가 출력되는 것을 볼 수 있음
+
+# DB 수정
+
+> sequelize를 이용해 데이터베이스 내부의 데이터를 수정하는 것
+
+## 서버에서 요청이 들어올 경로 처리하기
+
+### 라우터에 경로 추가하기
+
+```javascript
+
+```
+
+
+

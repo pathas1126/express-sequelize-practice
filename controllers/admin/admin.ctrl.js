@@ -34,3 +34,10 @@ exports.post_products_write = (req, res) => {
       throw error;
     });
 };
+
+exports.get_products_detail = (req, res) => {
+  const { id } = req.params;
+  models.Products.findByPk(id).then((product) => {
+    res.render("admin/detail.nunjucks", { product });
+  });
+};
