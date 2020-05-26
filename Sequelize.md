@@ -272,3 +272,118 @@ Executing (default): SHOW INDEX FROM `Products`
 - 두 번째 then의 return 이하에서 데이터베이스를 동기화함
 - CMD 창이나 워크 벤치로 exercise 데이터베이스를 조회해 보면,
   Products 테이블이 생성된 것을 볼 수 있음
+
+# DB 입력 INSERT
+
+> sequelize를 이용해 위에서 작성한 모델에 데이터를 추가하는 것
+> sql 문으로는 INSERT문에 해당
+
+## 서버에서 POST 요청 경로 처리
+
+> 클라이언트에서 form 양식을 통해 POST로 요청할 경로를 서버에서 처리
+> admin.ctrl.js 파일을 아래와 같이 수정
+
+```javascript
+const models = require("../../models");
+
+// ...
+exports.post_products_write = (req, res) => {
+  const { name, price, description } = req.body;
+  models.Products.create({
+    name,
+    price,
+    description,
+  })
+    .then(() => {
+      res.redirect("/admin/products");
+    })
+    .catch((error) => {
+      throw error;
+    });
+};
+
+// controllers/admin/index.js의 아래 코드로 POST 요청을 받음
+router.post("/products/write", ctrl.post_products_write);
+
+// 결과 로그
+/*
+Executing (default): INSERT INTO `Products` (`id`,`name`,`price`,`description`,`createdAt`,`updatedAt`) VALUES (DEFAULT,'안녕','15000','이것은 안녕이라는
+제품','2020-05-26 09:31:13','2020-05-26 09:31:13');
+*/
+```
+
+- create 메서드로 칼럼 추가, sql에서의 INSERT와 동일한 역할
+- 칼럼 추가 후 redirect 메서드로 products 페이지로 리다이렉션
+
+# DB 조회 SELECT
+
+> sequelize를 이용해서 모델에서 데이터를 조회하는 것
+> sql 문의 select문과 유사
+
+## sequelize 데이터 조회하기
+
+> admin.ctrl.js 파일을 아래와 같이 수정
+
+```javascript
+const models = require("../../models");
+
+exports.get_products = (_, res) => {
+  // res.render(
+  //   "admin/products.nunjucks",
+  //   { message: "hello" } // message 란 변수를 템플릿으로 내보낸다.
+  // );
+  models.Products.findAll({})
+    .then((products) => {
+      res.render("admin/products.nunjucks", {
+        products,
+      });
+    })
+    .catch((error) => {
+      throw error;
+    });
+};
+// ...
+
+// controllers/admin/index.js에서 아래 경로로 GET 요청을 받음
+router.get("/products", ctrl.get_products);
+```
+
+- findAll 메서드를 통해서 조건에 해당하는 모든 데이터 조회 
+- findOne 메서드를 사용하면 하나의 데이터만 조회
+
+## Nunjucks 에서 데이터 출력하기
+
+> admin/products.nunjucks 파일을 아래와 같이 수정
+
+```html
+{% set title = "관리자 리스트" %}
+{% extends "layout/base.nunjucks" %}
+
+{% block content -%}
+  <table class="table table-bordered table-hover">
+    <tr>
+      <th>제목</th>
+      <th>작성일</th>
+      <th>삭제</th>
+    </tr>
+
+    {% for product in products %}
+      <tr>
+        <td>{{product.name}}</td>
+        <td>
+          {{product.createdAt}}
+        </td>
+        <td>
+          <a href="#" class="btn btn-danger">삭제</a>
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+
+  <a href="/admin/products/write" class="btn btn-default">작성하기</a>
+
+{% endblock %}
+```
+
+- {% for Element in Array %} ~ {% endblock %}: Nunjucks의 for문을 사용해서 그 안에 데이터를 출력
+- 결과를 보면 form에서 데이터를 추가할 때마다 조회도 잘 되는 것을 확인할 수 있음
